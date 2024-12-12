@@ -1,25 +1,52 @@
-# typescript-library-template
+# airtable-mcp-server
 
-Personal template for creating TypeScript libraries.
-
-## Quick start
-
-1. If it should be published to NPM, add the `NPM_TOKEN` secret (make sure not to leave a trailing newline in there!). Otherwise, add `"private": true` in `package.json`.
-2. Update the package name, description and repo URL in `package.json`
-3. Enable 'Allow GitHub Actions to create and approve pull requests' in _Settings > Actions (General) > `Workflow permissions_
-4. Set protection on the master branch: require a pull request before merging, require reivew from code owners, require status checks to pass (select both ci options)
-5. Add the repo to the [file sync automation rules](https://github.com/domdomegg/domdomegg/blob/master/.github/workflows/repo-file-sync.yaml)
-6. Update the README, using the template commented out below
-
-<!--
-
-# TODO: name of library
-
-TODO: A short description of what the library does, explaining why people might want to use it.
+A Model Context Protocol server that provides read and write access to Airtable databases. This server enables LLMs to inspect database schemas, then read and write records.
 
 ## Usage
 
-TODO: usage instructions
+To use this server with the Claude Desktop app, add the following configuration to the "mcpServers" section of your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "airtable-mcp-server",
+        "pat123.abc123"
+      ]
+    }
+  }
+}
+```
+
+Replace `pat123.abc123` with your [Airtable personal access token](https://airtable.com/create/tokens). Your token should have at least `schema.bases:read` and `data.records:read`, and optionally the corresponding write permissions.
+
+## Components
+
+### Tools
+
+- **list_records**
+  - Lists records from a specified Airtable table
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table to query
+    - `maxRecords` (number, optional): Maximum number of records to return (defaults to 100)
+
+### Resources
+
+The server provides schema information for Airtable bases and tables:
+
+- **Table Schemas** (`airtable://<baseId>/<tableId>/schema`)
+  - JSON schema information for each table
+  - Includes:
+    - Base id and table id
+    - Table name and description
+    - Primary field ID
+    - Field definitions (ID, name, type, description, options)
+    - View definitions (ID, name, type)
+  - Automatically discovered from Airtable's metadata API
 
 ## Contributing
 
@@ -40,5 +67,3 @@ To release:
 1. Use `npm version <major | minor | patch>` to bump the version
 2. Run `git push --follow-tags` to push with tags
 3. Wait for GitHub Actions to publish to the NPM registry.
-
--->
