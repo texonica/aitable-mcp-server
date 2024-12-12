@@ -5,8 +5,12 @@ import {
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
   CallToolResult,
+  ListToolsResult,
+  ReadResourceResult,
+  ListResourcesResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   ListRecordsArgsSchema,
   ListTablesArgsSchema,
@@ -62,7 +66,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
     this.server.setRequestHandler(CallToolRequestSchema, this.handleCallTool.bind(this));
   }
 
-  private async handleListResources(request: z.infer<typeof ListResourcesRequestSchema>) {
+  private async handleListResources(request: z.infer<typeof ListResourcesRequestSchema>): Promise<ListResourcesResult> {
     const { bases } = await this.airtableService.listBases();
     const resources = await Promise.all(bases.map(async (base) => {
       const schema = await this.airtableService.getBaseSchema(base.id);
@@ -78,9 +82,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
     };
   }
 
-  private async handleReadResource(request: z.infer<typeof ReadResourceRequestSchema>) {
+  private async handleReadResource(request: z.infer<typeof ReadResourceRequestSchema>): Promise<ReadResourceResult> {
     const uri = request.params.uri;
-    const match = uri.match(/airtable:\/\/([^/]+)\/([^/]+)\/schema/);
+    const match = uri.match(/^airtable:\/\/([^/]+)\/([^/]+)\/schema$/);
     
     if (!match || !match[1] || !match[2]) {
       throw new Error('Invalid resource URI');
@@ -113,21 +117,21 @@ export class AirtableMCPServer implements IAirtableMCPServer {
     };
   }
 
-  private async handleListTools() {
+  private getInputSchema(schema: z.ZodType<object>): ListToolsResult['tools'][0]['inputSchema'] {
+    const jsonSchema = zodToJsonSchema(schema);
+    if (!('type' in jsonSchema) || jsonSchema.type !== 'object') {
+      throw new Error(`Invalid input schema to convert in airtable-mcp-server: expected an object but got ${'type' in jsonSchema ? jsonSchema.type : 'no type'}`);
+    }
+    return { ...jsonSchema, type: 'object' };
+  }
+
+  private async handleListTools(): Promise<ListToolsResult> {
     return {
       tools: [
         {
           name: 'list_records',
           description: 'List records from a table',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              maxRecords: { type: 'number', optional: true },
-            },
-            required: ['baseId', 'tableId'],
-          },
+          inputSchema: this.getInputSchema(ListRecordsArgsSchema),
         },
         {
           name: 'list_bases',
@@ -141,155 +145,53 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         {
           name: 'list_tables',
           description: 'List all tables in a specific base',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-            },
-            required: ['baseId'],
-          },
+          inputSchema: this.getInputSchema(ListTablesArgsSchema),
         },
         {
           name: 'get_record',
           description: 'Get a specific record by ID',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              recordId: { type: 'string' },
-            },
-            required: ['baseId', 'tableId', 'recordId'],
-          },
+          inputSchema: this.getInputSchema(GetRecordArgsSchema),
         },
         {
           name: 'create_record',
           description: 'Create a new record in a table',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              fields: { type: 'object' },
-            },
-            required: ['baseId', 'tableId', 'fields'],
-          },
+          inputSchema: this.getInputSchema(CreateRecordArgsSchema),
         },
         {
           name: 'update_records',
           description: 'Update one or more records in a table',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              records: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    id: { type: 'string' },
-                    fields: { type: 'object' },
-                  },
-                  required: ['id', 'fields'],
-                },
-              },
-            },
-            required: ['baseId', 'tableId', 'records'],
-          },
+          inputSchema: this.getInputSchema(UpdateRecordsArgsSchema),
         },
         {
           name: 'delete_records',
           description: 'Delete one or more records from a table',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              recordIds: {
-                type: 'array',
-                items: { type: 'string' },
-              },
-            },
-            required: ['baseId', 'tableId', 'recordIds'],
-          },
+          inputSchema: this.getInputSchema(DeleteRecordsArgsSchema),
         },
         {
           name: 'create_table',
           description: 'Create a new table in a base',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              name: { type: 'string' },
-              description: { type: 'string', optional: true },
-              fields: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    name: { type: 'string' },
-                    type: { type: 'string' },
-                    description: { type: 'string', optional: true },
-                    options: { type: 'object', optional: true },
-                  },
-                  required: ['name', 'type'],
-                },
-              },
-            },
-            required: ['baseId', 'name', 'fields'],
-          },
+          inputSchema: this.getInputSchema(CreateTableArgsSchema),
         },
         {
           name: 'update_table',
           description: 'Update a table\'s name or description',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              name: { type: 'string', optional: true },
-              description: { type: 'string', optional: true },
-            },
-            required: ['baseId', 'tableId'],
-          },
+          inputSchema: this.getInputSchema(UpdateTableArgsSchema),
         },
         {
           name: 'create_field',
           description: 'Create a new field in a table',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              name: { type: 'string' },
-              type: { type: 'string' },
-              description: { type: 'string', optional: true },
-              options: { type: 'object', optional: true },
-            },
-            required: ['baseId', 'tableId', 'name', 'type'],
-          },
+          inputSchema: this.getInputSchema(CreateFieldArgsSchema),
         },
         {
           name: 'update_field',
           description: 'Update a field\'s name or description',
-          inputSchema: {
-            type: 'object',
-            properties: {
-              baseId: { type: 'string' },
-              tableId: { type: 'string' },
-              fieldId: { type: 'string' },
-              name: { type: 'string', optional: true },
-              description: { type: 'string', optional: true },
-            },
-            required: ['baseId', 'tableId', 'fieldId'],
-          },
+          inputSchema: this.getInputSchema(UpdateFieldArgsSchema),
         },
       ],
     };
   }
 
-  private async handleCallTool(request: z.infer<typeof CallToolRequestSchema>) {
+  private async handleCallTool(request: z.infer<typeof CallToolRequestSchema>): Promise<CallToolResult> {
     try {
       switch (request.params.name) {
         case 'list_records': {
@@ -297,7 +199,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
           const records = await this.airtableService.listRecords(
             args.baseId,
             args.tableId,
-            args.maxRecords ? { maxRecords: args.maxRecords } : undefined
+            { maxRecords: args.maxRecords },
           );
           return this.formatToolResponse(records);
         }
