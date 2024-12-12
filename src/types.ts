@@ -129,7 +129,7 @@ export type Field = z.infer<typeof FieldSchema>;
 export type AirtableRecord = { id: string, fields: Record<string, any> };
 
 export interface ListRecordsOptions {
-  maxRecords?: number;
+  maxRecords?: number | undefined;
 }
 
 export interface IAirtableService {
