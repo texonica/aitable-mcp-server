@@ -286,12 +286,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
           const field = await this.airtableService.createField(
             args.baseId,
             args.tableId,
-            {
-              name: args.name,
-              type: args.type,
-              description: args.description,
-              options: args.options,
-            }
+            args.field
           );
           return this.formatToolResponse(field);
         }
