@@ -32,7 +32,81 @@ Replace `pat123.abc123` with your [Airtable personal access token](https://airta
   - Input parameters:
     - `baseId` (string, required): The ID of the Airtable base
     - `tableId` (string, required): The ID of the table to query
-    - `maxRecords` (number, optional): Maximum number of records to return (defaults to 100)
+    - `maxRecords` (number, optional): Maximum number of records to return
+
+- **list_bases**
+  - Lists all accessible Airtable bases
+  - No input parameters required
+  - Returns base ID, name, and permission level
+
+- **list_tables**
+  - Lists all tables in a specific base
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+  - Returns table ID, name, description, fields, and views
+
+- **get_record**
+  - Gets a specific record by ID
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `recordId` (string, required): The ID of the record to retrieve
+
+- **create_record**
+  - Creates a new record in a table
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `fields` (object, required): The fields and values for the new record
+
+- **update_records**
+  - Updates one or more records in a table
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `records` (array, required): Array of objects containing record ID and fields to update
+
+- **delete_records**
+  - Deletes one or more records from a table
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `recordIds` (array, required): Array of record IDs to delete
+
+- **create_table**
+  - Creates a new table in a base
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `name` (string, required): Name of the new table
+    - `description` (string, optional): Description of the table
+    - `fields` (array, required): Array of field definitions (name, type, description, options)
+
+- **update_table**
+  - Updates a table's name or description
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `name` (string, optional): New name for the table
+    - `description` (string, optional): New description for the table
+
+- **create_field**
+  - Creates a new field in a table
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `name` (string, required): Name of the new field
+    - `type` (string, required): Type of the field
+    - `description` (string, optional): Description of the field
+    - `options` (object, optional): Field-specific options
+
+- **update_field**
+  - Updates a field's name or description
+  - Input parameters:
+    - `baseId` (string, required): The ID of the Airtable base
+    - `tableId` (string, required): The ID of the table
+    - `fieldId` (string, required): The ID of the field
+    - `name` (string, optional): New name for the field
+    - `description` (string, optional): New description for the field
 
 ### Resources
 
@@ -57,6 +131,7 @@ Pull requests are welcomed on GitHub! To get started:
 3. Install dependencies with `npm install`
 4. Run `npm run test` to run tests
 5. Build with `npm run build`
+  - You can use `npm run build:watch` to automatically build after editing [`src/index.ts`](./src/index.ts). This means you can hit save, reload Claude Desktop (with Ctrl/Cmd+R), and the changes apply.
 
 ## Releases
 

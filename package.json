@@ -22,6 +22,7 @@
     "lint": "eslint --ext .js,.jsx,.ts,.tsx .",
     "clean": "rm -rf dist",
     "build": "tsc --project tsconfig.build.json && shx chmod +x dist/index.js",
+    "build:watch": "nodemon --watch src/index.ts --ext ts --exec \"npm run build\"",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@types/node": "^22.10.2",
     "eslint": "^8.57.0",
     "eslint-config-domdomegg": "^1.2.3",
+    "nodemon": "^3.1.7",
     "shx": "^0.3.4",
     "tsconfig-domdomegg": "^1.0.0",
     "typescript": "^5.7.2",
