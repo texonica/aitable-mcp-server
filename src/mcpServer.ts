@@ -290,7 +290,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
           const field = await this.airtableService.createField(
             args.baseId,
             args.tableId,
-            args.field,
+            args.nested.field,
           );
           return formatToolResponse(field);
         }
