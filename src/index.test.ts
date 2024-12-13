@@ -1,23 +1,75 @@
-import { test, expect } from 'vitest';
-import { multiply, sum } from './index';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { AirtableMCPServer } from './mcpServer.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-test('adds positive numbers', () => {
-  expect(sum(1, 3)).toBe(4);
-  expect(sum(10001, 1345)).toBe(11346);
-});
+// Mock the required modules
+vi.mock('./mcpServer.js');
 
-test('adds negative numbers', () => {
-  expect(sum(-1, -3)).toBe(-4);
-  expect(sum(-10001, -1345)).toBe(-11346);
-});
+describe('Main Application', () => {
+  // Save original argv
+  const originalArgv = process.argv;
+  const originalEnv = process.env;
+  
+  beforeEach(() => {
+    // Reset mocks before each test
+    vi.clearAllMocks();
 
-test('adds a negative and positive number', () => {
-  expect(sum(1, -3)).toBe(-2);
-  expect(sum(-10001, 1345)).toBe(-8656);
-});
+    // Reset process.argv
+    process.argv = originalArgv;
+    process.env = originalEnv;
+  });
 
-test('multiplies positive numbers', () => {
-  expect(multiply(1, 3)).toBe(3);
-  expect(multiply(2, 3)).toBe(6);
-  expect(multiply(10001, 1345)).toBe(13451345);
+  test('exits with error when no API key is provided', async () => {
+    // Set argv to simulate no arguments
+    process.argv = ['node', 'index.js'];
+    process.env = {};
+    
+    // Verify error
+    expect(() => import('./index.js')).rejects.toThrow('API key');
+  });
+
+  test('creates services and connects server with valid API key from command line', async () => {
+    // Set argv to simulate valid API key argument
+    process.argv = ['node', 'index.js', 'test-api-key'];
+    process.env = {};
+
+    // Mock the connect method
+    const mockConnect = vi.fn();
+    (AirtableMCPServer as any).mockImplementation(() => ({
+      connect: mockConnect
+    }));
+    
+    // Import and execute main
+    await import('./index.js');
+    
+    // Verify service creation and connection
+    expect(AirtableMCPServer).toHaveBeenCalled();
+    expect(mockConnect.mock.calls[0][0]).toBeInstanceOf(StdioServerTransport)
+  });
+
+  test('creates services and connects server with valid API key from environment', async () => {
+    // Set argv to simulate valid API key argument
+    process.argv = ['node', 'index.js'];
+    process.env = { 'AIRTABLE_API_KEY': 'test-api-key' };
+
+    // Mock the connect method
+    const mockConnect = vi.fn();
+    (AirtableMCPServer as any).mockImplementation(() => ({
+      connect: mockConnect
+    }));
+    
+    // Import and execute main
+    await import('./index.js');
+    
+    // Verify service creation and connection
+    expect(AirtableMCPServer).toHaveBeenCalled();
+    expect(mockConnect.mock.calls[0][0]).toBeInstanceOf(StdioServerTransport)
+  });
+
+  // Cleanup
+  afterEach(() => {
+    process.argv = originalArgv;
+    process.env = originalEnv;
+    vi.resetModules();
+  });
 });

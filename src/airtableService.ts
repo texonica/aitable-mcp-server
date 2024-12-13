@@ -20,10 +20,14 @@ export class AirtableService implements IAirtableService {
   private readonly fetch: typeof nodeFetch;
 
   constructor(
-    apiKey: string,
+    apiKey: string = process.env.AIRTABLE_API_KEY || '',
     baseUrl: string = 'https://api.airtable.com',
     fetch: typeof nodeFetch = nodeFetch
-) {
+  ) {
+    if (!apiKey) {
+      throw new Error('No API key set. Either:\n1. Pass it in as a command-line argument, for example `airtable-mcp-server <API_KEY>`\n2. Set it in the `AIRTABLE_API_KEY` environment variable');
+    }
+
     this.apiKey = apiKey;
     this.baseUrl = baseUrl;
     this.fetch = fetch;
