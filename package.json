@@ -1,6 +1,6 @@
 {
   "name": "airtable-mcp-server",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Airtable Model Context Protocol Server, for allowing AI systems to interact with your Airtable bases",
   "license": "MIT",
   "author": "Adam Jones (domdomegg)",
@@ -47,7 +47,10 @@
       "eslint-config-domdomegg"
     ],
     "rules": {
-      "import/extensions": ["error", "always"]
+      "import/extensions": [
+        "error",
+        "always"
+      ]
     }
   }
 }
