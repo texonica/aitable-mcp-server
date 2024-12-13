@@ -510,7 +510,10 @@ export const UpdateTableArgsSchema = z.object({
 export const CreateFieldArgsSchema = z.object({
   baseId: z.string(),
   tableId: z.string(),
-  field: FieldSchema,
+  // This is used as a workaround for https://github.com/orgs/modelcontextprotocol/discussions/90
+  nested: z.object({
+    field: FieldSchema,
+  }),
 });
 
 export const UpdateFieldArgsSchema = z.object({
