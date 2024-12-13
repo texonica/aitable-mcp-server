@@ -2,6 +2,8 @@
 
 A Model Context Protocol server that provides read and write access to Airtable databases. This server enables LLMs to inspect database schemas, then read and write records.
 
+https://github.com/user-attachments/assets/b4b42c1e-857b-4226-b4ff-edafda9de141
+
 ## Usage
 
 To use this server with the Claude Desktop app, add the following configuration to the "mcpServers" section of your `claude_desktop_config.json`:
