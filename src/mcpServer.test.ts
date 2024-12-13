@@ -1,9 +1,12 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AirtableMCPServer } from './mcpServer.js';
-import type { IAirtableService } from './types.js';
-import type { JSONRPCMessage, JSONRPCRequest, JSONRPCResponse, Tool } from '@modelcontextprotocol/sdk/types.js';
-import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import {
+  describe, test, expect, vi, beforeEach, afterEach,
+} from 'vitest';
+import type {
+  JSONRPCMessage, JSONRPCRequest, JSONRPCResponse, Tool,
+} from '@modelcontextprotocol/sdk/types.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import type { IAirtableService } from './types.js';
+import { AirtableMCPServer } from './mcpServer.js';
 
 describe('AirtableMCPServer', () => {
   let server: AirtableMCPServer;
@@ -18,8 +21,8 @@ describe('AirtableMCPServer', () => {
     mockAirtableService = {
       listBases: vi.fn().mockResolvedValue({
         bases: [
-          { id: 'base1', name: 'Test Base', permissionLevel: 'create' }
-        ]
+          { id: 'base1', name: 'Test Base', permissionLevel: 'create' },
+        ],
       }),
       getBaseSchema: vi.fn().mockResolvedValue({
         tables: [
@@ -29,46 +32,46 @@ describe('AirtableMCPServer', () => {
             description: 'Test Description',
             fields: [],
             views: [],
-            primaryFieldId: 'fld1'
-          }
-        ]
+            primaryFieldId: 'fld1',
+          },
+        ],
       }),
       listRecords: vi.fn().mockResolvedValue([
-        { id: 'rec1', fields: { name: 'Test Record' } }
+        { id: 'rec1', fields: { name: 'Test Record' } },
       ]),
       getRecord: vi.fn().mockResolvedValue({
         id: 'rec1',
-        fields: { name: 'Test Record' }
+        fields: { name: 'Test Record' },
       }),
       createRecord: vi.fn().mockResolvedValue({
         id: 'rec1',
-        fields: { name: 'New Record' }
+        fields: { name: 'New Record' },
       }),
       updateRecords: vi.fn().mockResolvedValue([
-        { id: 'rec1', fields: { name: 'Updated Record' } }
+        { id: 'rec1', fields: { name: 'Updated Record' } },
       ]),
       deleteRecords: vi.fn().mockResolvedValue([
-        { id: 'rec1', deleted: true }
+        { id: 'rec1', deleted: true },
       ]),
       createTable: vi.fn().mockResolvedValue({
         id: 'tbl1',
         name: 'New Table',
-        fields: []
+        fields: [],
       }),
       updateTable: vi.fn().mockResolvedValue({
         id: 'tbl1',
         name: 'Updated Table',
-        fields: []
+        fields: [],
       }),
       createField: vi.fn().mockResolvedValue({
         id: 'fld1',
         name: 'New Field',
-        type: 'singleLineText'
+        type: 'singleLineText',
       }),
       updateField: vi.fn().mockResolvedValue({
         id: 'fld1',
         name: 'Updated Field',
-        type: 'singleLineText'
+        type: 'singleLineText',
       }),
     };
 
@@ -84,7 +87,7 @@ describe('AirtableMCPServer', () => {
       clientTransport.onmessage = (response: JSONRPCMessage) => {
         resolve(response as JSONRPCResponse);
       };
-      
+
       clientTransport.send(message);
     });
   };
@@ -95,7 +98,7 @@ describe('AirtableMCPServer', () => {
         jsonrpc: '2.0',
         id: '1',
         method: 'resources/list',
-        params: {}
+        params: {},
       });
 
       expect(response.result).toEqual({
@@ -103,7 +106,7 @@ describe('AirtableMCPServer', () => {
           uri: 'airtable://base1/tbl1/schema',
           mimeType: 'application/json',
           name: 'Test Base: Test Table schema',
-        }]
+        }],
       });
     });
 
@@ -113,8 +116,8 @@ describe('AirtableMCPServer', () => {
         id: '1',
         method: 'resources/read',
         params: {
-          uri: 'airtable://base1/tbl1/schema'
-        }
+          uri: 'airtable://base1/tbl1/schema',
+        },
       });
 
       expect(response.result).toEqual({
@@ -129,8 +132,8 @@ describe('AirtableMCPServer', () => {
             primaryFieldId: 'fld1',
             fields: [],
             views: [],
-          })
-        }]
+          }),
+        }],
       });
     });
 
@@ -139,7 +142,7 @@ describe('AirtableMCPServer', () => {
         jsonrpc: '2.0',
         id: '1',
         method: 'tools/list',
-        params: {}
+        params: {},
       });
 
       expect(response.result.tools).toHaveLength(11);
@@ -147,8 +150,8 @@ describe('AirtableMCPServer', () => {
         name: 'list_records',
         description: expect.any(String),
         inputSchema: expect.objectContaining({
-          type: 'object'
-        })
+          type: 'object',
+        }),
       });
     });
 
@@ -162,9 +165,9 @@ describe('AirtableMCPServer', () => {
           arguments: {
             baseId: 'base1',
             tableId: 'tbl1',
-            maxRecords: 100
-          }
-        }
+            maxRecords: 100,
+          },
+        },
       });
 
       expect(response.result).toEqual({
@@ -172,10 +175,10 @@ describe('AirtableMCPServer', () => {
           type: 'text',
           mimeType: 'application/json',
           text: JSON.stringify([
-            { id: 'rec1', fields: { name: 'Test Record' } }
-          ])
+            { id: 'rec1', fields: { name: 'Test Record' } },
+          ]),
         }],
-        isError: false
+        isError: false,
       });
     });
   });
