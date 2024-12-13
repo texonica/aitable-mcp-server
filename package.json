@@ -47,7 +47,7 @@
       "eslint-config-domdomegg"
     ],
     "rules": {
-      "import/extensions": "always"
+      "import/extensions": ["error", "always"]
     }
   }
 }

@@ -11,6 +11,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import {
   ListRecordsArgsSchema,
   ListTablesArgsSchema,
@@ -25,11 +26,31 @@ import {
   IAirtableService,
   IAirtableMCPServer,
 } from './types.js';
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+
+const getInputSchema = (schema: z.ZodType<object>): ListToolsResult['tools'][0]['inputSchema'] => {
+  const jsonSchema = zodToJsonSchema(schema);
+  if (!('type' in jsonSchema) || jsonSchema.type !== 'object') {
+    throw new Error(`Invalid input schema to convert in airtable-mcp-server: expected an object but got ${'type' in jsonSchema ? jsonSchema.type : 'no type'}`);
+  }
+  return { ...jsonSchema, type: 'object' };
+};
+
+const formatToolResponse = (data: unknown, isError = false): CallToolResult => {
+  return {
+    content: [{
+      type: 'text',
+      mimeType: 'application/json',
+      text: JSON.stringify(data),
+    }],
+    isError,
+  };
+};
 
 export class AirtableMCPServer implements IAirtableMCPServer {
   private server: Server;
+
   private airtableService: IAirtableService;
+
   private readonly SCHEMA_PATH = 'schema';
 
   constructor(airtableService: IAirtableService) {
@@ -44,20 +65,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
           resources: {},
           tools: {},
         },
-      }
+      },
     );
     this.initializeHandlers();
-  }
-
-  private formatToolResponse(data: any, isError = false): CallToolResult {
-    return {
-      content: [{ 
-        type: 'text',
-        mimeType: 'application/json',
-        text: JSON.stringify(data),
-      }],
-      isError,
-    };
   }
 
   private initializeHandlers(): void {
@@ -67,7 +77,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
     this.server.setRequestHandler(CallToolRequestSchema, this.handleCallTool.bind(this));
   }
 
-  private async handleListResources(request: z.infer<typeof ListResourcesRequestSchema>): Promise<ListResourcesResult> {
+  private async handleListResources(): Promise<ListResourcesResult> {
     const { bases } = await this.airtableService.listBases();
     const resources = await Promise.all(bases.map(async (base) => {
       const schema = await this.airtableService.getBaseSchema(base.id);
@@ -84,28 +94,28 @@ export class AirtableMCPServer implements IAirtableMCPServer {
   }
 
   private async handleReadResource(request: z.infer<typeof ReadResourceRequestSchema>): Promise<ReadResourceResult> {
-    const uri = request.params.uri;
+    const { uri } = request.params;
     const match = uri.match(/^airtable:\/\/([^/]+)\/([^/]+)\/schema$/);
-    
+
     if (!match || !match[1] || !match[2]) {
       throw new Error('Invalid resource URI');
     }
 
     const [, baseId, tableId] = match;
     const schema = await this.airtableService.getBaseSchema(baseId);
-    const table = schema.tables.find(t => t.id === tableId);
-    
+    const table = schema.tables.find((t) => t.id === tableId);
+
     if (!table) {
       throw new Error(`Table ${tableId} not found in base ${baseId}`);
     }
-    
+
     return {
       contents: [
         {
           uri: request.params.uri,
           mimeType: 'application/json',
           text: JSON.stringify({
-            baseId: baseId,
+            baseId,
             tableId: table.id,
             name: table.name,
             description: table.description,
@@ -118,21 +128,14 @@ export class AirtableMCPServer implements IAirtableMCPServer {
     };
   }
 
-  private getInputSchema(schema: z.ZodType<object>): ListToolsResult['tools'][0]['inputSchema'] {
-    const jsonSchema = zodToJsonSchema(schema);
-    if (!('type' in jsonSchema) || jsonSchema.type !== 'object') {
-      throw new Error(`Invalid input schema to convert in airtable-mcp-server: expected an object but got ${'type' in jsonSchema ? jsonSchema.type : 'no type'}`);
-    }
-    return { ...jsonSchema, type: 'object' };
-  }
-
+  // eslint-disable-next-line class-methods-use-this
   private async handleListTools(): Promise<ListToolsResult> {
     return {
       tools: [
         {
           name: 'list_records',
           description: 'List records from a table',
-          inputSchema: this.getInputSchema(ListRecordsArgsSchema),
+          inputSchema: getInputSchema(ListRecordsArgsSchema),
         },
         {
           name: 'list_bases',
@@ -146,47 +149,47 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         {
           name: 'list_tables',
           description: 'List all tables in a specific base',
-          inputSchema: this.getInputSchema(ListTablesArgsSchema),
+          inputSchema: getInputSchema(ListTablesArgsSchema),
         },
         {
           name: 'get_record',
           description: 'Get a specific record by ID',
-          inputSchema: this.getInputSchema(GetRecordArgsSchema),
+          inputSchema: getInputSchema(GetRecordArgsSchema),
         },
         {
           name: 'create_record',
           description: 'Create a new record in a table',
-          inputSchema: this.getInputSchema(CreateRecordArgsSchema),
+          inputSchema: getInputSchema(CreateRecordArgsSchema),
         },
         {
           name: 'update_records',
           description: 'Update one or more records in a table',
-          inputSchema: this.getInputSchema(UpdateRecordsArgsSchema),
+          inputSchema: getInputSchema(UpdateRecordsArgsSchema),
         },
         {
           name: 'delete_records',
           description: 'Delete one or more records from a table',
-          inputSchema: this.getInputSchema(DeleteRecordsArgsSchema),
+          inputSchema: getInputSchema(DeleteRecordsArgsSchema),
         },
         {
           name: 'create_table',
           description: 'Create a new table in a base',
-          inputSchema: this.getInputSchema(CreateTableArgsSchema),
+          inputSchema: getInputSchema(CreateTableArgsSchema),
         },
         {
           name: 'update_table',
           description: 'Update a table\'s name or description',
-          inputSchema: this.getInputSchema(UpdateTableArgsSchema),
+          inputSchema: getInputSchema(UpdateTableArgsSchema),
         },
         {
           name: 'create_field',
           description: 'Create a new field in a table',
-          inputSchema: this.getInputSchema(CreateFieldArgsSchema),
+          inputSchema: getInputSchema(CreateFieldArgsSchema),
         },
         {
           name: 'update_field',
           description: 'Update a field\'s name or description',
-          inputSchema: this.getInputSchema(UpdateFieldArgsSchema),
+          inputSchema: getInputSchema(UpdateFieldArgsSchema),
         },
       ],
     };
@@ -202,12 +205,12 @@ export class AirtableMCPServer implements IAirtableMCPServer {
             args.tableId,
             { maxRecords: args.maxRecords },
           );
-          return this.formatToolResponse(records);
+          return formatToolResponse(records);
         }
 
         case 'list_bases': {
           const { bases } = await this.airtableService.listBases();
-          return this.formatToolResponse(bases.map(base => ({
+          return formatToolResponse(bases.map((base) => ({
             id: base.id,
             name: base.name,
             permissionLevel: base.permissionLevel,
@@ -217,7 +220,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         case 'list_tables': {
           const args = ListTablesArgsSchema.parse(request.params.arguments);
           const schema = await this.airtableService.getBaseSchema(args.baseId);
-          return this.formatToolResponse(schema.tables.map(table => ({
+          return formatToolResponse(schema.tables.map((table) => ({
             id: table.id,
             name: table.name,
             description: table.description,
@@ -229,7 +232,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         case 'get_record': {
           const args = GetRecordArgsSchema.parse(request.params.arguments);
           const record = await this.airtableService.getRecord(args.baseId, args.tableId, args.recordId);
-          return this.formatToolResponse({
+          return formatToolResponse({
             id: record.id,
             fields: record.fields,
           });
@@ -238,7 +241,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         case 'create_record': {
           const args = CreateRecordArgsSchema.parse(request.params.arguments);
           const record = await this.airtableService.createRecord(args.baseId, args.tableId, args.fields);
-          return this.formatToolResponse({
+          return formatToolResponse({
             id: record.id,
             fields: record.fields,
           });
@@ -247,7 +250,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         case 'update_records': {
           const args = UpdateRecordsArgsSchema.parse(request.params.arguments);
           const records = await this.airtableService.updateRecords(args.baseId, args.tableId, args.records);
-          return this.formatToolResponse(records.map(record => ({
+          return formatToolResponse(records.map((record) => ({
             id: record.id,
             fields: record.fields,
           })));
@@ -256,7 +259,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         case 'delete_records': {
           const args = DeleteRecordsArgsSchema.parse(request.params.arguments);
           const records = await this.airtableService.deleteRecords(args.baseId, args.tableId, args.recordIds);
-          return this.formatToolResponse(records.map(record => ({
+          return formatToolResponse(records.map((record) => ({
             id: record.id,
           })));
         }
@@ -267,9 +270,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
             args.baseId,
             args.name,
             args.fields,
-            args.description
+            args.description,
           );
-          return this.formatToolResponse(table);
+          return formatToolResponse(table);
         }
 
         case 'update_table': {
@@ -277,9 +280,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
           const table = await this.airtableService.updateTable(
             args.baseId,
             args.tableId,
-            { name: args.name, description: args.description }
+            { name: args.name, description: args.description },
           );
-          return this.formatToolResponse(table);
+          return formatToolResponse(table);
         }
 
         case 'create_field': {
@@ -287,9 +290,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
           const field = await this.airtableService.createField(
             args.baseId,
             args.tableId,
-            args.field
+            args.field,
           );
-          return this.formatToolResponse(field);
+          return formatToolResponse(field);
         }
 
         case 'update_field': {
@@ -301,9 +304,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
             {
               name: args.name,
               description: args.description,
-            }
+            },
           );
-          return this.formatToolResponse(field);
+          return formatToolResponse(field);
         }
 
         default: {
@@ -311,9 +314,9 @@ export class AirtableMCPServer implements IAirtableMCPServer {
         }
       }
     } catch (error) {
-      return this.formatToolResponse(
+      return formatToolResponse(
         `Error in tool ${request.params.name}: ${error instanceof Error ? error.message : String(error)}`,
-        true
+        true,
       );
     }
   }

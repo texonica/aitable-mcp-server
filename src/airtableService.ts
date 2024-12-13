@@ -1,4 +1,5 @@
 import nodeFetch, { RequestInit } from 'node-fetch';
+import { z } from 'zod';
 import {
   IAirtableService,
   ListBasesResponse,
@@ -11,18 +12,20 @@ import {
   BaseSchemaResponseSchema,
   TableSchema,
   FieldSchema,
+  FieldSet,
 } from './types.js';
-import { z } from 'zod';
 
 export class AirtableService implements IAirtableService {
   private readonly apiKey: string;
+
   private readonly baseUrl: string;
+
   private readonly fetch: typeof nodeFetch;
 
   constructor(
     apiKey: string = process.env.AIRTABLE_API_KEY || '',
     baseUrl: string = 'https://api.airtable.com',
-    fetch: typeof nodeFetch = nodeFetch
+    fetch: typeof nodeFetch = nodeFetch,
   ) {
     if (!apiKey) {
       throw new Error('No API key set. Either:\n1. Pass it in as a command-line argument, for example `airtable-mcp-server <API_KEY>`\n2. Set it in the `AIRTABLE_API_KEY` environment variable');
@@ -37,15 +40,15 @@ export class AirtableService implements IAirtableService {
     const response = await this.fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+        Accept: 'application/json',
         'Content-Type': 'application/json',
         ...options.headers,
       },
     });
 
     const responseText = await response.text();
-    
+
     if (!response.ok) {
       throw new Error(`Airtable API Error: ${response.statusText}. Response: ${responseText}`);
     }
@@ -70,7 +73,7 @@ export class AirtableService implements IAirtableService {
     const queryParams = options?.maxRecords ? `?maxRecords=${options.maxRecords}` : '';
     const response = await this.fetchFromAPI(
       `/v0/${baseId}/${tableId}${queryParams}`,
-      z.object({ records: z.array(z.object({ id: z.string(), fields: z.record(z.any()) })) })
+      z.object({ records: z.array(z.object({ id: z.string(), fields: z.record(z.any()) })) }),
     );
     return response.records;
   }
@@ -78,25 +81,25 @@ export class AirtableService implements IAirtableService {
   async getRecord(baseId: string, tableId: string, recordId: string): Promise<AirtableRecord> {
     return this.fetchFromAPI(
       `/v0/${baseId}/${tableId}/${recordId}`,
-      z.object({ id: z.string(), fields: z.record(z.any()) })
+      z.object({ id: z.string(), fields: z.record(z.any()) }),
     );
   }
 
-  async createRecord(baseId: string, tableId: string, fields: Record<string, any>): Promise<AirtableRecord> {
+  async createRecord(baseId: string, tableId: string, fields: FieldSet): Promise<AirtableRecord> {
     return this.fetchFromAPI(
       `/v0/${baseId}/${tableId}`,
       z.object({ id: z.string(), fields: z.record(z.any()) }),
       {
         method: 'POST',
         body: JSON.stringify({ fields }),
-      }
+      },
     );
   }
 
   async updateRecords(
-    baseId: string, 
-    tableId: string, 
-    records: { id: string; fields: Record<string, any> }[]
+    baseId: string,
+    tableId: string,
+    records: { id: string; fields: FieldSet }[],
   ): Promise<AirtableRecord[]> {
     const response = await this.fetchFromAPI(
       `/v0/${baseId}/${tableId}`,
@@ -104,19 +107,19 @@ export class AirtableService implements IAirtableService {
       {
         method: 'PATCH',
         body: JSON.stringify({ records }),
-      }
+      },
     );
     return response.records;
   }
 
   async deleteRecords(baseId: string, tableId: string, recordIds: string[]): Promise<{ id: string }[]> {
-    const queryString = recordIds.map(id => `records[]=${id}`).join('&');
+    const queryString = recordIds.map((id) => `records[]=${id}`).join('&');
     const response = await this.fetchFromAPI(
       `/v0/${baseId}/${tableId}?${queryString}`,
       z.object({ records: z.array(z.object({ id: z.string(), deleted: z.boolean() })) }),
       {
-        method: 'DELETE'
-      }
+        method: 'DELETE',
+      },
     );
     return response.records.map(({ id }) => ({ id }));
   }
@@ -128,14 +131,14 @@ export class AirtableService implements IAirtableService {
       {
         method: 'POST',
         body: JSON.stringify({ name, description, fields }),
-      }
+      },
     );
   }
 
   async updateTable(
     baseId: string,
     tableId: string,
-    updates: { name?: string; description?: string }
+    updates: { name?: string; description?: string },
   ): Promise<Table> {
     return this.fetchFromAPI(
       `/v0/meta/bases/${baseId}/tables/${tableId}`,
@@ -143,7 +146,7 @@ export class AirtableService implements IAirtableService {
       {
         method: 'PATCH',
         body: JSON.stringify(updates),
-      }
+      },
     );
   }
 
@@ -154,7 +157,7 @@ export class AirtableService implements IAirtableService {
       {
         method: 'POST',
         body: JSON.stringify(field),
-      }
+      },
     );
   }
 
@@ -162,7 +165,7 @@ export class AirtableService implements IAirtableService {
     baseId: string,
     tableId: string,
     fieldId: string,
-    updates: { name?: string; description?: string }
+    updates: { name?: string; description?: string },
   ): Promise<Field> {
     return this.fetchFromAPI(
       `/v0/meta/bases/${baseId}/tables/${tableId}/fields/${fieldId}`,
@@ -170,7 +173,7 @@ export class AirtableService implements IAirtableService {
       {
         method: 'PATCH',
         body: JSON.stringify(updates),
-      }
+      },
     );
   }
 }

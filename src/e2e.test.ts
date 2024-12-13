@@ -1,31 +1,28 @@
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
-import { AirtableMCPServer } from './mcpServer.js';
-import { AirtableService } from './airtableService.js';
-import type { 
+import {
+  describe, test, expect, beforeEach, afterEach,
+} from 'vitest';
+import type {
   CallToolResult,
-  JSONRPCMessage, 
-  JSONRPCRequest, 
+  JSONRPCMessage,
+  JSONRPCRequest,
   JSONRPCResponse,
   ListResourcesResult,
   ListToolsResult,
-  ReadResourceResult
+  ReadResourceResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import type { Base, Table, AirtableRecord } from './types.js';
-
-type TypedJSONRPCResponse<T> = JSONRPCResponse & {
-  result: T;
-}
+import { AirtableMCPServer } from './mcpServer.js';
+import { AirtableService } from './airtableService.js';
 
 // Run me with:
 // AIRTABLE_API_KEY=pat1234.abcd RUN_INTEGRATION=TRUE npm run test -- 'src/e2e.test.ts'
-(process.env['RUN_INTEGRATION'] ? describe : describe.skip)('AirtableMCPServer Integration', () => {
+(process.env.RUN_INTEGRATION ? describe : describe.skip)('AirtableMCPServer Integration', () => {
   let server: AirtableMCPServer;
   let serverTransport: InMemoryTransport;
   let clientTransport: InMemoryTransport;
 
   beforeEach(async () => {
-    const apiKey = process.env['AIRTABLE_API_KEY'];
+    const apiKey = process.env.AIRTABLE_API_KEY;
     if (!apiKey) {
       throw new Error('AIRTABLE_API_KEY environment variable is required for integration tests');
     }
@@ -41,13 +38,13 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       // Set up response handler
       clientTransport.onmessage = (response: JSONRPCMessage) => {
         const typedResponse = response as JSONRPCResponse;
-        if ("result" in typedResponse) {
+        if ('result' in typedResponse) {
           resolve(typedResponse.result as T);
           return;
         }
         reject(new Error('No result in response'));
       };
-      
+
       clientTransport.send(message);
     });
   };
@@ -57,7 +54,7 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       jsonrpc: '2.0',
       id: '1',
       method: 'tools/list',
-      params: {}
+      params: {},
     });
 
     expect(result.tools).toHaveLength(11);
@@ -65,8 +62,8 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       name: 'list_records',
       description: expect.any(String),
       inputSchema: expect.objectContaining({
-        type: 'object'
-      })
+        type: 'object',
+      }),
     });
   });
 
@@ -77,17 +74,17 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       method: 'tools/call',
       params: {
         name: 'list_bases',
-        arguments: {}
-      }
+        arguments: {},
+      },
     });
 
     expect(result).toMatchObject({
       content: [{
         type: 'text',
         mimeType: 'application/json',
-        text: expect.any(String)
+        text: expect.any(String),
       }],
-      isError: false
+      isError: false,
     });
 
     const content = JSON.parse(result.content[0]!.text as string);
@@ -96,7 +93,7 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
     expect(content[0]).toMatchObject({
       id: expect.any(String),
       name: expect.any(String),
-      permissionLevel: expect.any(String)
+      permissionLevel: expect.any(String),
     });
   });
 
@@ -108,8 +105,8 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       method: 'tools/call',
       params: {
         name: 'list_bases',
-        arguments: {}
-      }
+        arguments: {},
+      },
     });
 
     const bases = JSON.parse(basesResult.content[0]!.text as string);
@@ -124,27 +121,27 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       params: {
         name: 'list_tables',
         arguments: {
-          baseId
-        }
-      }
+          baseId,
+        },
+      },
     });
 
     expect(result).toMatchObject({
       content: [{
         type: 'text',
         mimeType: 'application/json',
-        text: expect.any(String)
+        text: expect.any(String),
       }],
-      isError: false
+      isError: false,
     });
 
-    const content = JSON.parse(result.content[0]!.text as string)
+    const content = JSON.parse(result.content[0]!.text as string);
     expect(Array.isArray(content)).toBe(true);
     if (content.length > 0) {
       expect(content[0]).toMatchObject({
         id: expect.any(String),
         name: expect.any(String),
-        fields: expect.any(Array)
+        fields: expect.any(Array),
       });
     }
   });
@@ -157,11 +154,11 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       method: 'tools/call',
       params: {
         name: 'list_bases',
-        arguments: {}
-      }
+        arguments: {},
+      },
     });
 
-    const bases = JSON.parse(basesResult.content[0]!.text as string)
+    const bases = JSON.parse(basesResult.content[0]!.text as string);
     expect(bases.length).toBeGreaterThan(0);
     const baseId = bases[0]!.id;
 
@@ -173,14 +170,15 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       params: {
         name: 'list_tables',
         arguments: {
-          baseId
-        }
-      }
+          baseId,
+        },
+      },
     });
 
-    const tables = JSON.parse(tablesResult.content[0]!.text as string)
+    const tables = JSON.parse(tablesResult.content[0]!.text as string);
     if (tables.length === 0) {
-      console.log('Skipping list_records test as no tables found');
+      // eslint-disable-next-line no-console
+      console.warn('Skipping list_records test as no tables found');
       return;
     }
     const tableId = tables[0]!.id;
@@ -195,26 +193,26 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
         arguments: {
           baseId,
           tableId,
-          maxRecords: 10
-        }
-      }
+          maxRecords: 10,
+        },
+      },
     });
 
     expect(result).toMatchObject({
       content: [{
         type: 'text',
         mimeType: 'application/json',
-        text: expect.any(String)
+        text: expect.any(String),
       }],
-      isError: false
+      isError: false,
     });
 
-    const content = JSON.parse(result.content[0]!.text as string)
+    const content = JSON.parse(result.content[0]!.text as string);
     expect(Array.isArray(content)).toBe(true);
     if (content.length > 0) {
       expect(content[0]).toMatchObject({
         id: expect.any(String),
-        fields: expect.any(Object)
+        fields: expect.any(Object),
       });
     }
   });
@@ -225,15 +223,16 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       jsonrpc: '2.0',
       id: '1',
       method: 'resources/list',
-      params: {}
+      params: {},
     });
 
     expect(listResult).toMatchObject({
-      resources: expect.any(Array)
+      resources: expect.any(Array),
     });
 
     if (listResult.resources.length === 0) {
-      console.log('Skipping resource read test as no resources found');
+      // eslint-disable-next-line no-console
+      console.warn('Skipping resource read test as no resources found');
       return;
     }
 
@@ -244,25 +243,25 @@ type TypedJSONRPCResponse<T> = JSONRPCResponse & {
       id: '2',
       method: 'resources/read',
       params: {
-        uri: resource.uri
-      }
+        uri: resource.uri,
+      },
     });
 
     expect(readResult).toMatchObject({
       contents: [{
         uri: resource.uri,
         mimeType: 'application/json',
-        text: expect.any(String)
-      }]
+        text: expect.any(String),
+      }],
     });
 
-    const content = JSON.parse(readResult.contents[0]!.text as string)
+    const content = JSON.parse(readResult.contents[0]!.text as string);
 
     expect(content).toMatchObject({
       baseId: expect.any(String),
       tableId: expect.any(String),
       name: expect.any(String),
-      fields: expect.any(Array)
+      fields: expect.any(Array),
     });
   });
 

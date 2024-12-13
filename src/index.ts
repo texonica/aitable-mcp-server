@@ -10,6 +10,6 @@ const main = async () => {
   const server = new AirtableMCPServer(airtableService);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-}
+};
 
 await main();
