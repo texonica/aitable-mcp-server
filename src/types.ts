@@ -1,3 +1,4 @@
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { z } from 'zod';
 
 // Zod schemas for API responses
@@ -522,6 +523,7 @@ export const UpdateFieldArgsSchema = z.object({
 
 export type ListBasesResponse = z.infer<typeof ListBasesResponseSchema>;
 export type BaseSchemaResponse = z.infer<typeof BaseSchemaResponseSchema>;
+export type Base = z.infer<typeof BaseSchema>;
 export type Table = z.infer<typeof TableSchema>;
 export type Field = z.infer<typeof FieldSchema>;
 export type AirtableRecord = { id: string, fields: Record<string, any> };
@@ -545,5 +547,5 @@ export interface IAirtableService {
 }
 
 export interface IAirtableMCPServer {
-  connect(transport: any): Promise<void>;
+  connect(transport: Transport): Promise<void>;
 }

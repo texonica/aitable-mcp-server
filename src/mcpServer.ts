@@ -25,6 +25,7 @@ import {
   IAirtableService,
   IAirtableMCPServer,
 } from './types.js';
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 export class AirtableMCPServer implements IAirtableMCPServer {
   private server: Server;
@@ -317,7 +318,7 @@ export class AirtableMCPServer implements IAirtableMCPServer {
     }
   }
 
-  async connect(transport: any): Promise<void> {
+  async connect(transport: Transport): Promise<void> {
     await this.server.connect(transport);
   }
 
