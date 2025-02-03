@@ -15,9 +15,11 @@ To use this server with the Claude Desktop app, add the following configuration 
       "command": "npx",
       "args": [
         "-y",
-        "airtable-mcp-server",
-        "pat123.abc123"
-      ]
+        "airtable-mcp-server"
+      ],
+      "env": {
+        "AIRTABLE_API_KEY": "pat123.abc123"
+      }
     }
   }
 }
