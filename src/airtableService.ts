@@ -28,7 +28,7 @@ export class AirtableService implements IAirtableService {
     fetch: typeof nodeFetch = nodeFetch,
   ) {
     if (!apiKey) {
-      throw new Error('No API key set. Either:\n1. Pass it in as a command-line argument, for example `airtable-mcp-server <API_KEY>`\n2. Set it in the `AIRTABLE_API_KEY` environment variable');
+      throw new Error('airtable-mcp-server: No API key provided. Set it in the `AIRTABLE_API_KEY` environment variable');
     }
 
     this.apiKey = apiKey;
