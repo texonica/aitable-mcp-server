@@ -1,12 +1,12 @@
 {
-  "name": "airtable-mcp-server",
-  "version": "1.3.0",
-  "description": "Airtable Model Context Protocol Server, for allowing AI systems to interact with your Airtable bases",
+  "name": "aitable-mcp-server",
+  "version": "0.1.0",
+  "description": "AITable Model Context Protocol Server, for allowing AI systems to interact with your AITable databases",
   "license": "MIT",
   "author": "Adam Jones (domdomegg)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/domdomegg/airtable-mcp-server.git"
+    "url": "git+https://github.com/domdomegg/airtable-mcp-server.git"
   },
   "type": "module",
   "main": "dist/index.js",
@@ -52,5 +52,10 @@
         "always"
       ]
     }
-  }
+  },
+  "keywords": [],
+  "bugs": {
+    "url": "https://github.com/domdomegg/airtable-mcp-server/issues"
+  },
+  "homepage": "https://github.com/domdomegg/airtable-mcp-server#readme"
 }
