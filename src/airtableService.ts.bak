@@ -194,96 +194,68 @@ export class AirtableService implements IAirtableService {
     );
   }
 
-  /**
-   * Get all searchable fields from a table
-   * 
-   * @param baseId Base ID
-   * @param tableId Table ID
-   * @returns Array of field IDs
-   */
-  async getSearchableFields(baseId: string, tableId: string): Promise<string[]> {
-    const baseSchema = await this.getBaseSchema(baseId);
-    const table = baseSchema.tables.find(t => t.id === tableId);
-    
+  private async validateAndGetSearchFields(
+    baseId: string,
+    tableId: string,
+    requestedFieldIds?: string[],
+  ): Promise<string[]> {
+    const schema = await this.getBaseSchema(baseId);
+    const table = schema.tables.find((t) => t.id === tableId);
     if (!table) {
-      throw new Error(`Table not found: ${tableId}`);
+      throw new Error(`Table ${tableId} not found in base ${baseId}`);
     }
-    
-    // Get all text, rich text, and URL fields as they are searchable
+
     const searchableFieldTypes = [
       'singleLineText',
       'multilineText',
       'richText',
-      'singleSelect',
-      'multipleSelects',
-      'url',
       'email',
-      'phone',
+      'url',
+      'phoneNumber',
     ];
-    
-    // Create an array of string field IDs
-    const searchableFields: string[] = [];
-    for (const field of table.fields) {
-      if (searchableFieldTypes.includes(field.type) && field.id) {
-        searchableFields.push(field.id);
-      }
+
+    const searchableFields = table.fields
+      .filter((field) => searchableFieldTypes.includes(field.type))
+      .map((field) => field.id);
+
+    if (searchableFields.length === 0) {
+      throw new Error('No text fields available to search');
     }
-    
+
+    // If specific fields were requested, validate they exist and are text fields
+    if (requestedFieldIds && requestedFieldIds.length > 0) {
+      // Check if any requested fields were invalid
+      const invalidFields = requestedFieldIds.filter((fieldId) => !searchableFields.includes(fieldId));
+      if (invalidFields.length > 0) {
+        throw new Error(`Invalid fields requested: ${invalidFields.join(', ')}`);
+      }
+
+      return requestedFieldIds;
+    }
+
     return searchableFields;
   }
 
-  /**
-   * Search for records containing specific text
-   * 
-   * @param baseId Base ID
-   * @param tableId Table ID
-   * @param searchTerm Text to search for
-   * @param fieldIds Optional specific fields to search in
-   * @param maxRecords Maximum number of records to return
-   * @returns Array of matched records
-   */
   async searchRecords(
     baseId: string,
     tableId: string,
     searchTerm: string,
     fieldIds?: string[],
     maxRecords?: number,
-  ): Promise<Record<string, any>[]> {
-    // Get all searchable fields if not specified
-    let fieldsToSearch: string[];
-    if (fieldIds && fieldIds.length > 0) {
-      const allSearchableFields = await this.getSearchableFields(baseId, tableId);
-      // Validate that all requested fields are searchable
-      const invalidFields = fieldIds.filter(id => !allSearchableFields.includes(id));
-      if (invalidFields.length > 0) {
-        throw new Error(`Invalid fields for searching: ${invalidFields.join(', ')}`);
-      }
-      fieldsToSearch = fieldIds;
-    } else {
-      fieldsToSearch = await this.getSearchableFields(baseId, tableId);
-    }
-    
-    if (fieldsToSearch.length === 0) {
-      throw new Error('No text fields available to search');
-    }
+  ): Promise<AirtableRecord[]> {
+    // Validate and get search fields
+    const searchFields = await this.validateAndGetSearchFields(baseId, tableId, fieldIds);
 
-    // Get all records first - we'll filter them in memory
-    const records = await this.listRecords(baseId, tableId, { maxRecords });
-    
-    // Filter records that contain the search term in any of the specified fields
-    const searchTermLower = searchTerm.toLowerCase();
-    const matchedRecords = records.filter(record => {
-      return fieldsToSearch.some(fieldId => {
-        const value = record.fields[fieldId];
-        if (value === undefined || value === null) return false;
-        
-        // Convert to string and check if it contains the search term
-        const valueStr = String(value).toLowerCase();
-        return valueStr.includes(searchTermLower);
-      });
-    });
-    
-    // Limit the results if maxRecords is specified
-    return maxRecords ? matchedRecords.slice(0, maxRecords) : matchedRecords;
+    // Escape the search term to prevent formula injection
+    const escapedTerm = searchTerm.replace(/["\\]/g, '\\$&');
+
+    // Build OR(FIND("term", field1), FIND("term", field2), ...)
+    const filterByFormula = `OR(${
+      searchFields
+        .map((fieldId) => `FIND("${escapedTerm}", {${fieldId}})`)
+        .join(',')
+    })`;
+
+    return this.listRecords(baseId, tableId, { maxRecords, filterByFormula });
   }
 }
