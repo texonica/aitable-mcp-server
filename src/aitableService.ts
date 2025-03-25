@@ -28,6 +28,9 @@ export class AITableService implements IAirtableService {
     baseUrl: string = 'https://api.aitable.ai',
     fetch: typeof nodeFetch = nodeFetch,
   ) {
+    console.log('API Key from env:', process.env.AITABLE_API_KEY);
+    console.log('API Key from param:', apiKey);
+    
     if (!apiKey) {
       throw new Error('aitable-mcp-server: No API key provided. Set it in the `AITABLE_API_KEY` environment variable');
     }
