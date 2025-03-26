@@ -11,24 +11,26 @@ import type {
   ReadResourceResult,
 } from '@modelcontextprotocol/sdk/types.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { AirtableMCPServer } from './mcpServer.js';
-import { AirtableService } from './airtableService.js';
+import { AITableMCPServer } from './mcpServer.js';
+import { AITableService } from './aitableService.js';
+import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 // Run me with:
-// AIRTABLE_API_KEY=pat1234.abcd RUN_INTEGRATION=TRUE npm run test -- 'src/e2e.test.ts'
-(process.env.RUN_INTEGRATION ? describe : describe.skip)('AirtableMCPServer Integration', () => {
-  let server: AirtableMCPServer;
+// AITABLE_API_KEY=pat1234.abcd RUN_INTEGRATION=TRUE npm run test -- 'src/e2e.test.ts'
+(process.env.RUN_INTEGRATION ? describe : describe.skip)('AITableMCPServer Integration', () => {
+  let server: AITableMCPServer;
   let serverTransport: InMemoryTransport;
   let clientTransport: InMemoryTransport;
 
   beforeEach(async () => {
-    const apiKey = process.env.AIRTABLE_API_KEY;
+    const apiKey = process.env.AITABLE_API_KEY;
     if (!apiKey) {
-      throw new Error('AIRTABLE_API_KEY environment variable is required for integration tests');
+      throw new Error('AITABLE_API_KEY environment variable is required for integration tests');
     }
 
-    const airtableService = new AirtableService(apiKey);
-    server = new AirtableMCPServer(airtableService);
+    const aitableService = new AITableService(apiKey);
+    server = new AITableMCPServer(aitableService);
     [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);
   });

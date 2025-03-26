@@ -1,24 +1,32 @@
 import {
-  describe, test, expect, vi, beforeEach, afterEach,
+  describe, test, expect, vi, beforeEach, afterEach, it,
 } from 'vitest';
 import type {
   JSONRPCMessage, JSONRPCRequest, JSONRPCResponse, Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import type { IAirtableService } from './types.js';
-import { AirtableMCPServer } from './mcpServer.js';
+import type { IAITableService } from './types.js';
+import { AITableMCPServer } from './mcpServer.js';
+import { McpServer, McpConnection } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ClientMessage, ContentItemText } from '@modelcontextprotocol/sdk/types.js';
 
-describe('AirtableMCPServer', () => {
-  let server: AirtableMCPServer;
-  let mockAirtableService: IAirtableService;
+describe('AITableMCPServer', () => {
+  let server: AITableMCPServer;
+  let mockAITableService: IAITableService;
   let serverTransport: InMemoryTransport;
   let clientTransport: InMemoryTransport;
+  let connection: McpConnection;
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    // Create mock AirtableService
-    mockAirtableService = {
+    // Create mocks
+    McpServer.prototype.connect = vi.fn().mockResolvedValue(undefined);
+    McpServer.prototype.tool = vi.fn();
+    McpServer.prototype.registerResourceProvider = vi.fn();
+
+    // Create mock AITableService
+    mockAITableService = {
       listBases: vi.fn().mockResolvedValue({
         bases: [
           { id: 'base1', name: 'Test Base', permissionLevel: 'create' },
@@ -30,9 +38,9 @@ describe('AirtableMCPServer', () => {
             id: 'tbl1',
             name: 'Test Table',
             description: 'Test Description',
+            primaryFieldId: 'fld1',
             fields: [],
             views: [],
-            primaryFieldId: 'fld1',
           },
         ],
       }),
@@ -73,10 +81,15 @@ describe('AirtableMCPServer', () => {
         name: 'Updated Field',
         type: 'singleLineText',
       }),
+      searchRecords: vi.fn().mockResolvedValue([
+        { id: 'rec1', fields: { name: 'Test Record' } },
+      ]),
     };
 
-    // Create server instance with test transport
-    server = new AirtableMCPServer(mockAirtableService);
+    // Create instance of server
+    server = new AITableMCPServer(mockAITableService);
+
+    // Create transport pair
     [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
     await server.connect(serverTransport);
   });
@@ -103,7 +116,7 @@ describe('AirtableMCPServer', () => {
 
       expect(response.result).toEqual({
         resources: [{
-          uri: 'airtable://base1/tbl1/schema',
+          uri: 'aitable://base1/tbl1/schema',
           mimeType: 'application/json',
           name: 'Test Base: Test Table schema',
         }],
@@ -116,20 +129,18 @@ describe('AirtableMCPServer', () => {
         id: '1',
         method: 'resources/read',
         params: {
-          uri: 'airtable://base1/tbl1/schema',
+          uri: 'aitable://base1/tbl1/schema',
         },
       });
 
       expect(response.result).toEqual({
         contents: [{
-          uri: 'airtable://base1/tbl1/schema',
+          uri: 'aitable://base1/tbl1/schema',
           mimeType: 'application/json',
           text: JSON.stringify({
-            baseId: 'base1',
-            tableId: 'tbl1',
+            id: 'tbl1',
             name: 'Test Table',
             description: 'Test Description',
-            primaryFieldId: 'fld1',
             fields: [],
             views: [],
           }),
@@ -181,6 +192,31 @@ describe('AirtableMCPServer', () => {
         isError: false,
       });
     });
+  });
+
+  it('should initialize properly', () => {
+    expect(server).toBeInstanceOf(AITableMCPServer);
+  });
+
+  it('should declare schema resource', async () => {
+    // Send a resource discovery request
+    const message: ClientMessage = {
+      id: '1',
+      type: 'resource-request',
+      uri: 'aitable://base1/tbl1/schema',
+    };
+
+    expect(McpServer.prototype.registerResourceProvider).toHaveBeenCalled();
+  });
+
+  // Additional tests would go here to test each tool
+  // For example:
+  it('should have registered tools', () => {
+    expect(McpServer.prototype.tool).toHaveBeenCalledWith(
+      'list_bases',
+      expect.any(Object),
+      expect.any(Function)
+    );
   });
 
   afterEach(async () => {

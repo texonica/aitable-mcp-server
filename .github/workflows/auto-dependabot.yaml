@@ -1,5 +1,4 @@
-# This file is centrally managed
-# https://github.com/domdomegg/domdomegg/blob/master/file-sync/auto-dependabot.yaml
+# This workflow manages Dependabot automation
 
 name: Dependabot automation
 
