@@ -77,14 +77,64 @@ export class AITableMCPServer extends McpServer implements IAITableMCPServer {
         baseId: z.string().describe('ID of the AITable base'),
       },
       async (args: { baseId: string }, _extra: RequestHandlerExtra) => {
-        const schema = await this.aitableService.getBaseSchema(args.baseId);
-        return {
-          content: [{
-            type: 'text',
-            mimeType: 'application/json',
-            text: JSON.stringify(schema),
-          }],
-        };
+        try {
+          // First get standard schema
+          const schema = await this.aitableService.getBaseSchema(args.baseId);
+          
+          // Then get all datasheets including those in subfolders
+          try {
+            const allDatasheets = await this.aitableService.getAllDatasheets(args.baseId);
+            
+            // Add path information to each table if it matches a datasheet
+            schema.tables = schema.tables.map(table => {
+              const matchingDatasheet = allDatasheets.find(ds => ds.id === table.id);
+              if (matchingDatasheet) {
+                return {
+                  ...table,
+                  path: matchingDatasheet.path
+                };
+              }
+              return table;
+            });
+            
+            // Add any datasheets that weren't in the original tables list
+            const existingTableIds = new Set(schema.tables.map(t => t.id));
+            const additionalDatasheets = allDatasheets
+              .filter(ds => !existingTableIds.has(ds.id))
+              .map(ds => ({
+                id: ds.id,
+                name: ds.name,
+                path: ds.path,
+                description: '',
+                primaryFieldId: '', // This will be populated later if needed
+                fields: [],
+                views: []
+              }));
+            
+            schema.tables = [...schema.tables, ...additionalDatasheets];
+            console.log(`Enhanced schema now has ${schema.tables.length} tables (added ${additionalDatasheets.length} from subfolders)`);
+          } catch (error) {
+            // If getAllDatasheets fails, just return the original schema
+            console.error('Failed to get all datasheets:', error);
+          }
+          
+          return {
+            content: [{
+              type: 'text',
+              mimeType: 'application/json',
+              text: JSON.stringify(schema),
+            }],
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              mimeType: 'application/json',
+              text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+            }],
+            isError: true,
+          };
+        }
       }
     );
 
@@ -295,6 +345,37 @@ export class AITableMCPServer extends McpServer implements IAITableMCPServer {
             text: JSON.stringify({ field }),
           }],
         };
+      }
+    );
+
+    // List all datasheets tool (including those in subfolders)
+    this.tool(
+      'list_all_datasheets',
+      'List all datasheets in a space, including those in subfolders',
+      {
+        spaceId: z.string().describe('ID of the AITable space to search for datasheets'),
+      },
+      async (args: { spaceId: string }, _extra: RequestHandlerExtra) => {
+        try {
+          const datasheets = await this.aitableService.getAllDatasheets(args.spaceId);
+          
+          return {
+            content: [{
+              type: 'text',
+              mimeType: 'application/json',
+              text: JSON.stringify({ datasheets }),
+            }],
+          };
+        } catch (error) {
+          return {
+            content: [{
+              type: 'text',
+              mimeType: 'application/json',
+              text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }),
+            }],
+            isError: true,
+          };
+        }
       }
     );
   }
