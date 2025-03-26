@@ -6,12 +6,12 @@ startCommand:
     # JSON Schema defining the configuration options for the MCP.
     type: object
     required:
-      - airtableApiKey
+      - aitableApiKey
     properties:
-      airtableApiKey:
+      aitableApiKey:
         type: string
-        description: The API key for accessing the Airtable server.
+        description: The API key for accessing the AITable server.
   commandFunction:
     # A function that produces the CLI command to start the MCP on stdio.
     |-
-    (config) => ({command: 'node', args: ['dist/index.js'], env: {AIRTABLE_API_KEY: config.airtableApiKey}})
+    (config) => ({command: 'node', args: ['dist/index.js'], env: {AITABLE_API_KEY: config.aitableApiKey}})

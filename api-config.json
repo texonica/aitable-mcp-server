@@ -1,0 +1,7 @@
+{
+  "baseUrl": "https://aitable.ai",
+  "headers": {
+    "Authorization": "Bearer usk3Yk0DwQRo5BWrNNCAubm",
+    "Accept": "application/json"
+  }
+}

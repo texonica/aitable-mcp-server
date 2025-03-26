@@ -3,7 +3,7 @@ import {
   Mock,
 } from 'vitest';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { AirtableMCPServer } from './mcpServer.js';
+import { AITableMCPServer } from './mcpServer.js';
 
 // Mock the required modules
 vi.mock('./mcpServer.js');
@@ -38,7 +38,7 @@ describe('Main Application', () => {
 
     // Mock the connect method
     const mockConnect = vi.fn();
-    (AirtableMCPServer as Mock).mockImplementation(() => ({
+    (AITableMCPServer as Mock).mockImplementation(() => ({
       connect: mockConnect,
     }));
 
@@ -46,18 +46,18 @@ describe('Main Application', () => {
     await import('./index.js');
 
     // Verify service creation and connection
-    expect(AirtableMCPServer).toHaveBeenCalled();
+    expect(AITableMCPServer).toHaveBeenCalled();
     expect(mockConnect.mock.calls[0][0]).toBeInstanceOf(StdioServerTransport);
   });
 
   test('creates services and connects server with valid API key from environment', async () => {
     // Set argv to simulate valid API key argument
     process.argv = ['node', 'index.js'];
-    process.env = { AIRTABLE_API_KEY: 'test-api-key' };
+    process.env = { AITABLE_API_KEY: 'test-api-key' };
 
     // Mock the connect method
     const mockConnect = vi.fn();
-    (AirtableMCPServer as Mock).mockImplementation(() => ({
+    (AITableMCPServer as Mock).mockImplementation(() => ({
       connect: mockConnect,
     }));
 
@@ -65,7 +65,7 @@ describe('Main Application', () => {
     await import('./index.js');
 
     // Verify service creation and connection
-    expect(AirtableMCPServer).toHaveBeenCalled();
+    expect(AITableMCPServer).toHaveBeenCalled();
     expect(mockConnect.mock.calls[0][0]).toBeInstanceOf(StdioServerTransport);
   });
 

@@ -71,6 +71,17 @@ export const ListTablesArgsSchema = z.object({
   detailLevel: z.enum(['tableIdentifiersOnly', 'identifiersOnly', 'full']).optional().describe('The amount of detail to get about the tables'),
 });
 
+export const ListAllDatasheetsArgsSchema = z.object({
+  spaceId: z.string().describe('ID of the AITable space to search for datasheets'),
+});
+
+export const GetDatasheetRecordsByNameArgsSchema = z.object({
+  spaceId: z.string().describe('ID of the AITable space containing the datasheet'),
+  datasheetName: z.string().describe('Name of the datasheet to get records from'),
+  maxRecords: z.number().optional().describe('Maximum number of records to return (optional)'),
+  filterByFormula: z.string().optional().describe('Filter formula to apply (optional)'),
+});
+
 export const DescribeTableArgsSchema = z.object({
   baseId: z.string().describe('ID of the AITable base'),
   tableId: z.string().describe('ID of the table to describe'),
@@ -145,7 +156,21 @@ export type Table = z.infer<typeof TableSchema>;
 export type Field = z.infer<typeof FieldSchema>;
 
 export type FieldSet = Record<string, any>;
-export type AirtableRecord = { id: string; fields: FieldSet };
+export type AITableRecord = { id: string; fields: FieldSet };
+
+/**
+ * Extended information about a datasheet, including its location in the folder hierarchy
+ */
+export interface DatasheetInfo {
+  /** Unique ID of the datasheet */
+  id: string;
+  /** Name of the datasheet */
+  name: string;
+  /** Path to the datasheet including folder hierarchy (e.g. "Folder > Subfolder > Datasheet") */
+  path: string;
+  /** ID of the space containing this datasheet */
+  spaceId: string;
+}
 
 export interface ListRecordsOptions {
   maxRecords?: number;
@@ -153,27 +178,24 @@ export interface ListRecordsOptions {
 }
 
 // Service interfaces
-export interface IAirtableService {
+export interface IAITableService {
   listBases(): Promise<ListBasesResponse>;
   getBaseSchema(baseId: string): Promise<BaseSchemaResponse>;
-  listRecords(baseId: string, tableId: string, options?: ListRecordsOptions): Promise<AirtableRecord[]>;
-  getRecord(baseId: string, tableId: string, recordId: string): Promise<AirtableRecord>;
-  createRecord(baseId: string, tableId: string, fields: FieldSet): Promise<AirtableRecord>;
-  updateRecords(baseId: string, tableId: string, records: { id: string; fields: FieldSet }[]): Promise<AirtableRecord[]>;
+  getAllDatasheets(spaceId: string): Promise<DatasheetInfo[]>;
+  getDatasheetRecordsByName(spaceId: string, datasheetName: string, options?: ListRecordsOptions): Promise<AITableRecord[]>;
+  listRecords(baseId: string, tableId: string, options?: ListRecordsOptions): Promise<AITableRecord[]>;
+  getRecord(baseId: string, tableId: string, recordId: string): Promise<AITableRecord>;
+  createRecord(baseId: string, tableId: string, fields: FieldSet): Promise<AITableRecord>;
+  updateRecords(baseId: string, tableId: string, records: { id: string; fields: FieldSet }[]): Promise<AITableRecord[]>;
   deleteRecords(baseId: string, tableId: string, recordIds: string[]): Promise<{ id: string }[]>;
   createTable(baseId: string, name: string, fields: Field[], description?: string): Promise<Table>;
   updateTable(baseId: string, tableId: string, updates: { name?: string; description?: string }): Promise<Table>;
   createField(baseId: string, tableId: string, field: Omit<Field, 'id'>): Promise<Field>;
   updateField(baseId: string, tableId: string, fieldId: string, updates: { name?: string; description?: string }): Promise<Field>;
-  searchRecords(baseId: string, tableId: string, searchTerm: string, fieldIds?: string[], maxRecords?: number): Promise<AirtableRecord[]>;
+  searchRecords(baseId: string, tableId: string, searchTerm: string, fieldIds?: string[], maxRecords?: number): Promise<AITableRecord[]>;
 }
 
-export interface IAirtableMCPServer {
+export interface IAITableMCPServer {
   connect(transport: Transport): Promise<void>;
   close(): Promise<void>;
 }
-
-// Aliases to maintain both naming conventions
-export type AITableRecord = AirtableRecord;
-export type IAITableService = IAirtableService;
-export type IAITableMCPServer = IAirtableMCPServer;
