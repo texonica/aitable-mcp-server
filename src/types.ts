@@ -97,7 +97,16 @@ export const GetRecordArgsSchema = z.object({
 export const CreateRecordArgsSchema = z.object({
   baseId: z.string().describe('ID of the AITable base'),
   tableId: z.string().describe('ID of the table'),
-  fields: z.record(z.string(), z.any()).describe('Fields and values for the new record'),
+  fields: z.record(
+    z.string(),
+    z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+      z.null(),
+      z.array(z.union([z.string(), z.number(), z.boolean(), z.null()]))
+    ])
+  ).describe('Fields and values for the new record. Values should be primitives (string, number, boolean, null) or arrays of primitives.'),
 });
 
 export const UpdateRecordsArgsSchema = z.object({
@@ -106,7 +115,16 @@ export const UpdateRecordsArgsSchema = z.object({
   records: z.array(
     z.object({
       id: z.string().describe('ID of the record to update'),
-      fields: z.record(z.string(), z.any()).describe('Fields and values to update'),
+      fields: z.record(
+        z.string(),
+        z.union([
+          z.string(),
+          z.number(),
+          z.boolean(),
+          z.null(),
+          z.array(z.union([z.string(), z.number(), z.boolean(), z.null()]))
+        ])
+      ).describe('Fields and values to update. Values should be primitives (string, number, boolean, null) or arrays of primitives.'),
     }),
   ).describe('Records to update'),
 });

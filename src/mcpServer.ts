@@ -2,25 +2,35 @@ import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mc
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { Variables } from '@modelcontextprotocol/sdk/shared/uriTemplate.js';
+
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import type {
-  IAITableService,
-  IAITableMCPServer,
-  Base,
-  Table,
-  Field,
-  TableSchema,
+
+// Import VALUES needed
+import { 
+  IAITableService, 
+  DatasheetInfo, 
+  AITableRecord, 
+  FieldSet, 
+  ListRecordsOptions,
+  CreateRecordArgsSchema, 
+  UpdateRecordsArgsSchema 
+} from './types.js'; 
+
+// Import TYPES needed
+import type { 
+  IAITableMCPServer
 } from './types.js';
+
 import { AITableService } from "./aitableService.js";
 
 /**
  * AITable MCP Server class
  */
 export class AITableMCPServer extends McpServer implements IAITableMCPServer {
-  private aitableService: AITableService;
+  private aitableService: IAITableService;
 
-  constructor(aitableService: AITableService) {
+  constructor(aitableService: IAITableService) {
     super({
       name: 'AITable MCP Server',
       version: '1.0.0',
@@ -188,13 +198,10 @@ export class AITableMCPServer extends McpServer implements IAITableMCPServer {
     this.tool(
       'create_record',
       'Create a new record in a table',
-      {
-        baseId: z.string().describe('ID of the AITable base'),
-        tableId: z.string().describe('ID of the table'),
-        fields: z.record(z.string(), z.any()).describe('Fields and values for the new record'),
-      },
+      CreateRecordArgsSchema.shape,
       async (args: { baseId: string; tableId: string; fields: Record<string, any> }, _extra: RequestHandlerExtra) => {
-        const record = await this.aitableService.createRecord(args.baseId, args.tableId, args.fields);
+        const validatedArgs = CreateRecordArgsSchema.parse(args);
+        const record = await this.aitableService.createRecord(validatedArgs.baseId, validatedArgs.tableId, validatedArgs.fields);
         return {
           content: [{
             type: 'text',
@@ -209,16 +216,10 @@ export class AITableMCPServer extends McpServer implements IAITableMCPServer {
     this.tool(
       'update_records',
       'Update multiple records in a table',
-      {
-        baseId: z.string().describe('ID of the AITable base'),
-        tableId: z.string().describe('ID of the table'),
-        records: z.array(z.object({
-          id: z.string(),
-          fields: z.record(z.string(), z.any()),
-        })).describe('Array of records to update'),
-      },
+      UpdateRecordsArgsSchema.shape,
       async (args: { baseId: string; tableId: string; records: Array<{ id: string; fields: Record<string, any> }> }, _extra: RequestHandlerExtra) => {
-        const records = await this.aitableService.updateRecords(args.baseId, args.tableId, args.records);
+        const validatedArgs = UpdateRecordsArgsSchema.parse(args);
+        const records = await this.aitableService.updateRecords(validatedArgs.baseId, validatedArgs.tableId, validatedArgs.records);
         return {
           content: [{
             type: 'text',
