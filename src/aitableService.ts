@@ -342,29 +342,28 @@ export class AITableService implements IAITableService {
         fields: response.fields
       };
     } catch (error) {
-      // Fall back to AITable-style API
-      const response = await this.fetchFromAPI(
-        `/datasheets/${tableId}/records/${recordId}`,
-        z.object({
-          success: z.boolean(),
-          code: z.number(),
-          data: z.object({
-            record: z.object({
-              recordId: z.string(),
-              fields: z.record(z.any()),
-              createdAt: z.number().optional(),
-              updatedAt: z.number().optional()
-            })
-          }),
-          message: z.string()
-        })
-      );
-      
-      // Transform record to match expected format
-      return {
-        id: response.data.record.recordId,
-        fields: response.data.record.fields
-      };
+      // Fall back to AITable-style API using filterByFormula on assumed 'RecordID' field
+      // Note: This assumes a field named 'RecordID' contains the record ID.
+      console.warn(`Airtable-style getRecord failed for ${recordId}, falling back to listRecords with filterByFormula on RecordID field.`);
+      try {
+        const filterFormula = `{RecordID}='${recordId}'`;
+        const options = { filterByFormula: filterFormula, maxRecords: 2 }; // Max 2 to detect duplicates
+        const matchingRecords = await this.listRecords(baseId, tableId, options);
+
+        if (matchingRecords.length === 1) {
+          return matchingRecords[0];
+        } else if (matchingRecords.length === 0) {
+          throw new Error(`aitable-mcp-server: Record ${recordId} not found using RecordID filter.`);
+        } else {
+          // This case should ideally not happen if RecordID is unique
+          console.error(`aitable-mcp-server: Found multiple records (${matchingRecords.length}) for RecordID ${recordId}. Returning the first one.`);
+          return matchingRecords[0];
+        }
+      } catch (fallbackError) {
+        console.error(`Error during AITable fallback using listRecords for record ${recordId}:`, fallbackError);
+        // Re-throw the original error or a more specific fallback error
+        throw new Error(`aitable-mcp-server: Failed to get record ${recordId}. Original error: ${error instanceof Error ? error.message : String(error)}. Fallback error: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+      }
     }
   }
 
